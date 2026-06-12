@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+
+<html lang="id">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Global Quake Tracker - Pemantau Gempa Bumi Dunia</title>
+
+    
+
+    <!-- Info PWA & Tema Mobil -->
+
+    <meta name="theme-color" content="#111827">
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <meta name="apple-mobile-web-app-title" content="QuakeTracker">
+
+    <link rel="manifest" href="manifest.json">
+
+    <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%23dc2626'/><path d='M256 40L64 210v242h130l20-80-30-60 50-60-20-60 60-80 10 90-30 60 40 40-20 70 30 80h138V210L256 40z' fill='%23ffffff'/><path d='M256 40L236 130l30-60-10 90-60 80 20 60-50 60 30 60-20 80h40l20-70-40-40 30-60-10-90 60-80-20-60 50-60-30-60z' fill='%237f1d1d'/></svg>">
+
+
+
+    <!-- Tailwind CSS untuk Styling Modern -->
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    
+
+    <!-- Leaflet CSS -->
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+    
+
+    <!-- FontAwesome untuk Ikon -->
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+
+
+    <!-- Leaflet JS -->
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+
+
+    <style>
+
+        / Mengatur tinggi peta agar mengisi area sisa /
+
+        #map {
+
+            height: calc(100vh - 80px);
+
+            z-index: 1;
+
+        }
+
+        / Kustomisasi scrollbar untuk daftar gempa /
+
+        .custom-scrollbar::-webkit-scrollbar {
+
+            width: 6px;
+
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+
+            background: #1f2937;
+
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+
+            background: #4b5563;
+
+            border-radius: 3px;
+
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+
+            background: #6b7280;
+
+        }
+
+        / Animasi denyut nadi (pulse) untuk gempa terbaru/signifikan /
+
+        @keyframes pulse-ring {
+
+            0% { transform: scale(0.33); opacity: 0.8; }
+
+            80%, 100% { opacity: 0; }
+
+        }
+
+        .pulse-marker {
+
+            position: relative;
+
+        }
+
+        .pulse-marker::after {
+
+            content: '';
+
+            position: absolute;
+
+            top: -50%;
+
+            left: -50%;
+
+            width: 200%;
+
+            height: 200%;
+
+            border-radius: 50%;
+
+            border: 2px solid currentColor;
+
+            animation: pulse-ring 1.5s cubic-bezier(0.215, 0.610, 0.355, 1) infinite;
+
+        }
+
+    </style>
+
+</head>
+
+<body class="bg-gray-950 text-gray-100 font-sans h-screen flex flex-col overflow-hidden">
+
+
+
+    <!-- Header / Navbar -->
+
+    <header class="bg-gray-900 border-b border-gray-800 px-6 py-4 flex flex-wrap items-center justify-between shadow-lg z-10">
+
+        <div class="flex items-center space-x-3">
+
+            <div class="bg-red-600 text-white p-2 rounded-lg animate-pulse">
+
+                <i class="fa-solid fa-house-crack text-xl"></i>
+
+            </div>
+
+            <div>
+
+                <h1 class="text-xl font-bold tracking-wider text-white">QUAKETRACKER</h1>
+
+                <p class="text-xs text-gray-400">Pemantau Gempa Bumi Global Real-Time (Data USGS)</p>
+
+            </div>
+
+        </div>
+
+        
+
+        <!-- Status & Pengaturan Live Filter -->
+
+        <div class="flex flex-wrap items-center gap-4 mt-2 sm:mt-0">
+
+            <!-- Tombol Install PWA -->
+
+            <button id="install-pwa-btn" class="hidden bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center space-x-1.5 transition duration-200 shadow-md">
+
+                <i class="fa-solid fa-download"></i>
+
+                <span>Install Aplikasi</span>
+
+            </button>
+
+            <!-- Tombol Installed Check -->
+
+            <div id="installed-check" class="hidden bg-emerald-600/20 text-emerald-400 text-xs font-semibold px-3 py-2 rounded-lg flex items-center space-x-1.5">
+
+                <i class="fa-solid fa-check-circle"></i>
+
+                <span>Terinstal</span>
+
+            </div>
+
+
+
+            <!-- Filter Magnitudo -->
+
+            <div class="flex items-center space-x-2 bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-700">
+
+                <span class="text-xs text-gray-400">Mag Minimum:</span>
+
+                <select id="mag-filter" class="bg-transparent text-sm font-semibold text-red-400 focus:outline-none cursor-pointer">
+
+                    <option value="all" class="bg-gray-800 text-white">Semua</option>
+
+                    <option value="2.5" class="bg-gray-800 text-white">M 2.5+</option>
+
+                    <option value="4.5" class="bg-gray-800 text-white">M 4.5+</option>
+
+                    <option value="6.0" class="bg-gray-800 text-white">M 6.0+ (Kuat)</option>
+
+                </select>
+
+            </div>
+
+
+
+            <!-- Rentang Waktu Data -->
+
+            <div class="flex items-center space-x-2 bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-700">
+
+                <span class="text-xs text-gray-400">Rentang Waktu:</span>
+
+                <select id="time-filter" class="bg-transparent text-sm font-semibold text-yellow-400 focus:outline-none cursor-pointer">
+
+                    <option value="hour" class="bg-gray-800 text-white">1 Jam Terakhir</option>
+
+                    <option value="day" selected class="bg-gray-800 text-white">24 Jam Terakhir</option>
+
+                    <option value="week" class="bg-gray-800 text-white">7 Hari Terakhir</option>
+
+                </select>
+
+            </div>
+
+
+
+            <!-- Status Sinkronisasi Real-time -->
+
+            <button id="refresh-btn" class="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-4 py-2 rounded-lg flex items-center space-x-2 transition duration-200 shadow-md">
+
+                <i id="refresh-icon" class="fa-solid fa-arrows-rotate"></i>
+
+                <span id="refresh-text">Refresh Data</span>
+
+            </button>
+
+        </div>
+
+    </header>
+
+
+
+    <!-- Main Container Layout -->
+
+    <main class="flex-1 flex flex-col md:flex-row relative overflow-hidden">
+
+        
+
+        <!-- Panel Samping / List Gempa (Kiri) -->
+
+        <aside class="w-full md:w-96 bg-gray-900 border-r border-gray-800 flex flex-col z-10 transition-all duration-300 md:relative absolute md:translate-x-0 -translate-x-full h-full" id="sidebar">
+
+            
+
+            <!-- Statistik Singkat -->
+
+            <div class="p-4 bg-gray-900/80 border-b border-gray-800 backdrop-blur-sm">
+
+                <div class="grid grid-cols-3 gap-2 text-center">
+
+                    <div class="bg-gray-800/50 p-2 rounded-lg border border-gray-800">
+
+                        <span class="block text-xs text-gray-400">Total Gempa</span>
+
+                        <span id="stat-total" class="text-lg font-bold text-gray-200">-</span>
+
+                    </div>
+
+                    <div class="bg-gray-800/50 p-2 rounded-lg border border-gray-800">
+
+                        <span class="block text-xs text-gray-400">Mag 5.0+</span>
+
+                        <span id="stat-major" class="text-lg font-bold text-yellow-500">-</span>
+
+                    </div>
+
+                    <div class="bg-gray-800/50 p-2 rounded-lg border border-gray-800">
+
+                        <span class="block text-xs text-gray-400">Terkuat</span>
+
+                        <span id="stat-strongest" class="text-lg font-bold text-red-500">-</span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- List Gempa Terkini -->
+
+            <div class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2.5" id="earthquake-list">
+
+                <!-- Loader Placeholder -->
+
+                <div class="flex flex-col items-center justify-center py-12 text-gray-500">
+
+                    <i class="fa-solid fa-circle-notch animate-spin text-3xl text-red-500 mb-3"></i>
+
+                    <p class="text-sm">Menghubungi server USGS...</p>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- Footer / Keterangan Sumber -->
+
+            <div class="p-3 bg-gray-950 border-t border-gray-800 text-center text-xs text-gray-500 flex justify-between items-center">
+
+                <span>Sumber Data: <strong>USGS Real-time API</strong></span>
+
+                <span class="flex items-center space-x-1">
+
+                    <span class="w-2 h-2 rounded-full bg-green-500 inline-block animate-ping"></span>
+
+                    <span>Aktif</span>
+
+                </span>
+
+            </div>
+
+        </aside>
+
+
+
+        <!-- Peta Utama (Kanan) -->
+
+        <div class="flex-1 relative">
+
+            <div id="map" class="w-full h-full bg-gray-950"></div>
+
+
+
+            <!-- Tombol Toggle Panel Sidebar untuk Mobile -->
+
+            <button id="sidebar-toggle" class="absolute top-4 left-4 md:hidden bg-gray-900 text-white p-3 rounded-full shadow-2xl border border-gray-700 z-[1000] focus:outline-none hover:bg-gray-800">
+
+                <i class="fa-solid fa-list-ul"></i>
+
+            </button>
+
+
+
+            <!-- Legend Peta -->
+
+            <div class="absolute bottom-6 right-6 bg-gray-900/95 border border-gray-800 p-4 rounded-xl shadow-2xl z-[1000] backdrop-blur-md max-w-xs text-xs">
+
+                <h4 class="font-bold text-gray-200 mb-2 border-b border-gray-800 pb-1.5 flex items-center gap-1.5">
+
+                    <i class="fa-solid fa-circle-info text-red-500"></i> Legenda Kekuatan (Magnitudo)
+
+                </h4>
+
+                <div class="space-y-2">
+
+                    <div class="flex items-center gap-3">
+
+                        <span class="w-4 h-4 rounded-full bg-green-500 border border-black/40 inline-block"></span>
+
+                        <span class="text-gray-300">&lt; 3.0 M (Sangat Lemah)</span>
+
+                    </div>
+
+                    <div class="flex items-center gap-3">
+
+                        <span class="w-4 h-4 rounded-full bg-yellow-500 border border-black/40 inline-block"></span>
+
+                        <span class="text-gray-300">3.0 - 4.9 M (Ringan s/d Sedang)</span>
+
+                    </div>
+
+                    <div class="flex items-center gap-3">
+
+                        <span class="w-4 h-4 rounded-full bg-orange-500 border border-black/40 inline-block"></span>
+
+                        <span class="text-gray-300">5.0 - 5.9 M (Sedang - Kuat)</span>
+
+                    </div>
+
+                    <div class="flex items-center gap-3">
+
+                        <span class="w-4 h-4 rounded-full bg-red-600 border border-black/40 inline-block animate-pulse"></span>
+
+                        <span class="text-gray-300 font-semibold text-red-400">&gt;= 6.0 M (Kuat / Merusak)</span>
+
+                    </div>
+
+                </div>
+
+                <div class="mt-3 pt-2 border-t border-gray-800 text-[10px] text-gray-500">
+
+                    *Ukuran lingkaran di peta mewakili tingkat kekuatan gempa.
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+    </main>
+
+
+
+    <!-- Custom Pop-up Modal untuk Detail Gempa jika Diperlukan -->
+
+    <div id="modal" class="hidden fixed inset-0 bg-black/75 z-[9999] flex items-center justify-center p-4">
+
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl">
+
+            <div id="modal-header" class="p-4 border-b border-gray-800 flex justify-between items-center bg-gray-950">
+
+                <span class="text-sm font-bold uppercase tracking-widest text-red-500" id="modal-title-mag">Gempa Kuat</span>
+
+                <button onclick="closeModal()" class="text-gray-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+
+            </div>
+
+            <div class="p-6 space-y-4" id="modal-content">
+
+                <!-- Diisi via JavaScript -->
+
+            </div>
+
+            <div class="p-4 bg-gray-950 border-t border-gray-800 flex justify-end">
+
+                <button onclick="closeModal()" class="px-5 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 text-sm font-semibold rounded-lg transition">Tutup</button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- Logika Utama JavaScript -->
+
+    <script>
+
+        // ==========================================
+        // Registrasi Service Worker PWA
+        // ==========================================
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                .then(reg => {
+                    console.log('✅ PWA Service Worker registered successfully!', reg.scope);
+                })
+                .catch(err => console.error('❌ Service Worker registration failed:', err));
+            });
+        }
+
+        // ==========================================
+        // PWA Install Button Logic
+        // ==========================================
+        let deferredPrompt;
+        const installBtn = document.getElementById('install-pwa-btn');
+        const installedCheck = document.getElementById('installed-check');
+
+        // Deteksi jika PWA sudah terinstal
+        window.addEventListener('appinstalled', () => {
+            console.log('✅ Aplikasi QuakeTracker berhasil diinstal!');
+            installBtn.classList.add('hidden');
+            installedCheck.classList.remove('hidden');
+            deferredPrompt = null;
+        });
+
+        // Tangkap beforeinstallprompt event
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.classList.remove('hidden');
+            installedCheck.classList.add('hidden');
+        });
+
+        // Click handler untuk tombol install
+        installBtn.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            
+            console.log(`User response: ${outcome}`);
+            deferredPrompt = null;
+            installBtn.classList.add('hidden');
+        });
+
+        // ==========================================
+        // Inisialisasi Peta Leaflet
+        // ==========================================
+        const map = L.map('map', {
+            zoomControl: false 
+        }).setView([0.7893, 113.9213], 3);
+
+        L.control.zoom({
+            position: 'topright'
+        }).addTo(map);
+
+        const darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 20
+        }).addTo(map);
+
+        const quakeLayer = L.layerGroup().addTo(map);
+
+        let currentEarthquakes = [];
+        let mapMarkers = {};
+
+        // ==========================================
+        // Fungsi Utility
+        // ==========================================
+        function getQuakeColor(mag) {
+            if (mag >= 6.0) return '#dc2626';
+            if (mag >= 5.0) return '#f97316';
+            if (mag >= 3.0) return '#eab308';
+            return '#22c55e';
+        }
+
+        function getQuakeRadius(mag) {
+            return Math.max(4, Math.pow(mag, 1.8) * 1.5);
+        }
+
+        function getUSGSUrl(timeframe) {
+            if (timeframe === 'hour') {
+                return 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson';
+            } else if (timeframe === 'week') {
+                return 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson';
+            } else {
+                return 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson';
+            }
+        }
+
+        // ==========================================
+        // Fetch Data dari USGS
+        // ==========================================
+        async function fetchQuakeData() {
+            const refreshBtn = document.getElementById('refresh-btn');
+            const refreshIcon = document.getElementById('refresh-icon');
+            const refreshText = document.getElementById('refresh-text');
+            const listContainer = document.getElementById('earthquake-list');
+
+            refreshBtn.disabled = true;
+            refreshIcon.classList.add('animate-spin');
+            refreshText.innerText = 'Memperbarui...';
+
+            const timeframe = document.getElementById('time-filter').value;
+            const url = getUSGSUrl(timeframe);
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Gagal mengambil data dari USGS');
+                
+                const data = await response.json();
+                currentEarthquakes = data.features || [];
+                renderEarthquakes();
+
+            } catch (error) {
+                console.error('Error:', error);
+                listContainer.innerHTML = `
+                    <div class="text-center py-10 px-4 text-gray-500">
+                        <i class="fa-solid fa-triangle-exclamation text-3xl text-red-500 mb-2"></i>
+                        <p class="text-sm font-semibold">Gagal Mengambil Data</p>
+                        <p class="text-xs text-gray-600 mt-1">Periksa koneksi internet Anda atau coba lagi nanti.</p>
+                    </div>
+                `;
+            } finally {
+                refreshBtn.disabled = false;
+                refreshIcon.classList.remove('animate-spin');
+                refreshText.innerText = 'Refresh Data';
+            }
+        }
+
+        // ==========================================
+        // Render Earthquakes
+        // ==========================================
+        function renderEarthquakes() {
+            const listContainer = document.getElementById('earthquake-list');
+            const magFilter = document.getElementById('mag-filter').value;
+            
+            quakeLayer.clearLayers();
+            mapMarkers = {};
+            listContainer.innerHTML = '';
+
+            const filteredQuakes = currentEarthquakes.filter(feature => {
+                const mag = feature.properties.mag;
+                if (magFilter === 'all') return true;
+                return mag >= parseFloat(magFilter);
+            });
+
+            updateStatistics(filteredQuakes);
+
+            if (filteredQuakes.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="text-center py-12 text-gray-500">
+                        <i class="fa-solid fa-circle-question text-3xl mb-2"></i>
+                        <p class="text-sm">Tidak ada gempa terdeteksi</p>
+                        <p class="text-xs text-gray-600 mt-1">Gunakan filter magnitudo atau rentang waktu yang lebih rendah.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            filteredQuakes.forEach(quake => {
+                const id = quake.id;
+                const props = quake.properties;
+                const geom = quake.geometry;
+
+                const lat = geom.coordinates[1];
+                const lng = geom.coordinates[0];
+                const depth = geom.coordinates[2];
+                const mag = props.mag ? props.mag.toFixed(1) : 'N/A';
+                const place = props.place || 'Lokasi tidak dikenal';
+                const time = new Date(props.time).toLocaleString('id-ID', {
+                    dateStyle: 'medium',
+                    timeStyle: 'short'
+                });
+
+                const color = getQuakeColor(parseFloat(mag));
+                const radius = getQuakeRadius(parseFloat(mag));
+                const isMajor = parseFloat(mag) >= 6.0;
+                
+                const marker = L.circleMarker([lat, lng], {
+                    radius: radius,
+                    fillColor: color,
+                    color: color,
+                    weight: isMajor ? 2 : 1,
+                    opacity: 0.8,
+                    fillOpacity: 0.6,
+                    className: isMajor ? 'pulse-marker' : ''
+                });
+
+                const popupContent = `
+                    <div class="bg-gray-900 text-gray-100 p-3 rounded-lg min-w-[200px] border border-gray-800">
+                        <div class="flex items-center justify-between border-b border-gray-800 pb-2 mb-2">
+                            <span class="text-xs font-bold text-gray-400">Detail Gempa</span>
+                            <span class="px-2 py-0.5 rounded text-xs font-black text-white" style="background-color: ${color}">M ${mag}</span>
+                        </div>
+                        <h5 class="font-bold text-sm text-gray-100 mb-2">${place}</h5>
+                        <div class="space-y-1 text-xs text-gray-400">
+                            <p><i class="fa-regular fa-clock w-4"></i> ${time}</p>
+                            <p><i class="fa-solid fa-arrow-down-wide-narrow w-4"></i> Kedalaman: <strong class="text-gray-200">${depth} km</strong></p>
+                            <p><i class="fa-solid fa-location-dot w-4"></i> Koordinat: <strong class="text-gray-200">${lat.toFixed(4)}, ${lng.toFixed(4)}</strong></p>
+                        </div>
+                        <div class="mt-3 flex justify-between gap-2">
+                            <a href="${props.url}" target="_blank" class="flex-1 text-center bg-gray-800 hover:bg-gray-700 text-[10px] text-gray-300 py-1 rounded transition">Detail USGS <i class="fa-solid fa-arrow-up-right-from-square ml-0.5"></i></a>
+                            <button onclick="focusOnQuake('${id}', true)" class="flex-1 bg-red-600/30 hover:bg-red-600 text-[10px] text-white py-1 rounded transition">Buka Fokus</button>
+                        </div>
+                    </div>
+                `;
+
+                marker.bindPopup(popupContent, {
+                    closeButton: false,
+                    className: 'quake-popup-custom'
+                });
+
+                quakeLayer.addLayer(marker);
+                mapMarkers[id] = marker;
+
+                const card = document.createElement('div');
+                card.id = `card-${id}`;
+                card.className = "bg-gray-800/45 hover:bg-gray-800 border border-gray-800/80 p-3.5 rounded-xl flex items-center gap-3 cursor-pointer transition duration-150 hover:border-gray-700 active:scale-[0.98]";
+                
+                card.onclick = () => {
+                    focusOnQuake(id, false);
+                    if (window.innerWidth < 768) {
+                        toggleSidebar();
+                    }
+                };
+
+                card.innerHTML = `
+                    <div class="w-12 h-12 rounded-lg flex flex-col items-center justify-center flex-shrink-0 text-white font-bold" style="background-color: ${color}">
+                        <span class="text-xs text-white/80">MAG</span>
+                        <span class="text-base font-black leading-tight">${mag}</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h4 class="text-sm font-bold text-gray-100 truncate">${place}</h4>
+                        <p class="text-xs text-gray-400 mt-0.5"><i class="fa-regular fa-clock text-[10px]"></i> ${time}</p>
+                        <div class="flex gap-3 mt-1.5 text-[11px] text-gray-400">
+                            <span>Kedalaman: <strong class="text-gray-300">${depth} km</strong></span>
+                        </div>
+                    </div>
+                    <div class="flex-shrink-0 text-gray-500 hover:text-gray-300">
+                        <i class="fa-solid fa-chevron-right text-xs"></i>
+                    </div>
+                `;
+                
+                listContainer.appendChild(card);
+            });
+        }
+
+        // ==========================================
+        // Update Statistics
+        // ==========================================
+        function updateStatistics(quakes) {
+            document.getElementById('stat-total').innerText = quakes.length;
+            const majorCount = quakes.filter(q => q.properties.mag >= 5.0).length;
+            document.getElementById('stat-major').innerText = majorCount;
+
+            if (quakes.length > 0) {
+                const strongest = quakes.reduce((prev, current) => {
+                    return (prev.properties.mag > current.properties.mag) ? prev : current;
+                });
+                document.getElementById('stat-strongest').innerText = strongest.properties.mag.toFixed(1);
+            } else {
+                document.getElementById('stat-strongest').innerText = '-';
+            }
+        }
+
+        // ==========================================
+        // Focus on Quake
+        // ==========================================
+        function focusOnQuake(id, isFromMapPopup = false) {
+            const quake = currentEarthquakes.find(q => q.id === id);
+            if (!quake) return;
+
+            const lat = quake.geometry.coordinates[1];
+            const lng = quake.geometry.coordinates[0];
+            const props = quake.properties;
+            const geom = quake.geometry;
+            const depth = geom.coordinates[2];
+            const mag = props.mag ? props.mag.toFixed(1) : 'N/A';
+            const place = props.place || 'Tidak dikenal';
+            const time = new Date(props.time).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' });
+            const color = getQuakeColor(parseFloat(mag));
+
+            map.flyTo([lat, lng], 7, {
+                animate: true,
+                duration: 1.5
+            });
+
+            document.querySelectorAll('#earthquake-list > div').forEach(c => {
+                c.classList.remove('bg-gray-700/80', 'border-red-500');
+                c.classList.add('bg-gray-800/45', 'border-gray-800/80');
+            });
+            const activeCard = document.getElementById(`card-${id}`);
+            if (activeCard) {
+                activeCard.classList.remove('bg-gray-800/45', 'border-gray-800/80');
+                activeCard.classList.add('bg-gray-700/80', 'border-red-500');
+                activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+
+            const marker = mapMarkers[id];
+            if (marker && !isFromMapPopup) {
+                setTimeout(() => {
+                    marker.openPopup();
+                }, 1000);
+            }
+
+            if (parseFloat(mag) >= 6.0 && !isFromMapPopup) {
+                showModal(mag, place, time, depth, lat, lng, props.url, color);
+            }
+        }
+
+        // ==========================================
+        // Modal Functions
+        // ==========================================
+        function showModal(mag, place, time, depth, lat, lng, url, color) {
+            const titleEl = document.getElementById('modal-title-mag');
+            const contentEl = document.getElementById('modal-content');
+
+            titleEl.innerHTML = `<span class="flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation text-red-500"></i> Peringatan Gempa Besar M ${mag}</span>`;
+            
+            contentEl.innerHTML = `
+                <div class="text-center space-y-3">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-600/20 text-red-500 border border-red-500/30 animate-pulse mb-2">
+                        <i class="fa-solid fa-house-crack text-3xl"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-100">${place}</h3>
+                </div>
+
+                <div class="bg-gray-950/80 p-4 rounded-xl border border-gray-800 space-y-2 text-sm mt-4">
+                    <div class="flex justify-between border-b border-gray-900 pb-1.5">
+                        <span class="text-gray-400">Kekuatan:</span>
+                        <span class="font-extrabold text-red-500">M ${mag}</span>
+                    </div>
+                    <div class="flex justify-between border-b border-gray-900 pb-1.5">
+                        <span class="text-gray-400">Waktu Terjadi:</span>
+                        <span class="text-gray-200">${time}</span>
+                    </div>
+                    <div class="flex justify-between border-b border-gray-900 pb-1.5">
+                        <span class="text-gray-400">Kedalaman:</span>
+                        <span class="font-semibold text-gray-200">${depth} km</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Koordinat:</span>
+                        <span class="text-gray-200">${lat.toFixed(4)}°, ${lng.toFixed(4)}°</span>
+                    </div>
+                </div>
+
+                <div class="text-xs text-gray-400 leading-relaxed text-center italic mt-2">
+                    "Skala Gempa di atas 6.0 berpotensi merusak dan menimbulkan goncangan signifikan di pemukiman sekitar pusat gempa."
+                </div>
+
+                <div class="mt-4">
+                    <a href="${url}" target="_blank" class="block text-center w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-lg text-sm shadow-lg transition">
+                        Buka Laporan Lengkap USGS <i class="fa-solid fa-arrow-up-right-from-square ml-1"></i>
+                    </a>
+                </div>
+            `;
+
+            document.getElementById('modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.add('hidden');
+        }
+
+        // ==========================================
+        // Event Listeners
+        // ==========================================
+        document.getElementById('refresh-btn').addEventListener('click', fetchQuakeData);
+        document.getElementById('mag-filter').addEventListener('change', renderEarthquakes);
+        document.getElementById('time-filter').addEventListener('change', fetchQuakeData);
+
+        // Sidebar Toggle
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        
+        function toggleSidebar() {
+            sidebar.classList.toggle('-translate-x-full');
+            const isOpen = !sidebar.classList.contains('-translate-x-full');
+            sidebarToggle.innerHTML = isOpen ? '<i class="fa-solid fa-xmark"></i>' : '<i class="fa-solid fa-list-ul"></i>';
+        }
+        sidebarToggle.addEventListener('click', toggleSidebar);
+
+        // ==========================================
+        // Initialize
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchQuakeData();
+            
+            // Auto-refresh setiap 2 menit
+            setInterval(() => {
+                fetchQuakeData();
+            }, 120000);
+        });
+
+    </script>
+
+</body>
+
+</html>
