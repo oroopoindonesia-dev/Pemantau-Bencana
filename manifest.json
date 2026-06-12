@@ -1,0 +1,47 @@
+{
+  "name": "Global Quake Tracker - Pemantau Gempa Bumi Dunia",
+  "short_name": "QuakeTracker",
+  "description": "Aplikasi pemantau gempa bumi global real-time dengan data dari USGS. Pantau aktivitas seismic di seluruh dunia dengan peta interaktif dan notifikasi real-time.",
+  "scope": "./",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#111827",
+  "background_color": "#111827",
+  "categories": ["productivity", "utilities"],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 540 720'><rect width='540' height='720' fill='%23111827'/><circle cx='270' cy='360' r='200' fill='%23dc2626'/><path d='M270 160L150 260v280h60l15-60-25-50 40-50-15-50 50-70 8 75-25 50 30 35-15 60 25 60h100V260L270 160z' fill='%23ffffff'/><path d='M270 160L255 230l25-50-8 75-50 70 15 50-40 50 25 50-15 60h35l15-60-30-35 25-50-8-75 50-70 15 50-25 50 15 60z' fill='%237f1d1d'/></svg>",
+      "sizes": "540x720",
+      "type": "image/svg+xml",
+      "form_factor": "narrow",
+      "purpose": "any"
+    }
+  ],
+  "icons": [
+    {
+      "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='40' fill='%23dc2626'/><path d='M96 30L40 80v92h40l8-32-15-30 25-30-8-30 30-40 4 45-15 30 18 21-8 32 15 32h55V80L96 30z' fill='%23ffffff'/><path d='M96 30L84 75l15-30-4 45-30 40 8 30-25 30 15 30-8 32h20l8-32-18-21 15-30-4-45 30-40 8 30-15 30 8 32z' fill='%237f1d1d'/></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='40' fill='%23dc2626'/><path d='M96 30L40 80v92h40l8-32-15-30 25-30-8-30 30-40 4 45-15 30 18 21-8 32 15 32h55V80L96 30z' fill='%23ffffff'/><path d='M96 30L84 75l15-30-4 45-30 40 8 30-25 30 15 30-8 32h20l8-32-18-21 15-30-4-45 30-40 8 30-15 30 8 32z' fill='%237f1d1d'/></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%23dc2626'/><path d='M256 40L64 210v242h130l20-80-30-60 50-60-20-60 60-80 10 90-30 60 40 40-20 70 30 80h138V210L256 40z' fill='%23ffffff'/><path d='M256 40L236 130l30-60-10 90-60 80 20 60-50 60 30 60-20 80h40l20-70-40-40 30-60-10-90 60-80-20-60 50-60-30-60z' fill='%237f1d1d'/></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%23dc2626'/><path d='M256 40L64 210v242h130l20-80-30-60 50-60-20-60 60-80 10 90-30 60 40 40-20 70 30 80h138V210L256 40z' fill='%23ffffff'/><path d='M256 40L236 130l30-60-10 90-60 80 20 60-50 60 30 60-20 80h40l20-70-40-40 30-60-10-90 60-80-20-60 50-60-30-60z' fill='%237f1d1d'/></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
